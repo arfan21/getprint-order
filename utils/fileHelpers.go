@@ -41,7 +41,7 @@ func getFileName(data string)(string, error){
 
 	randArrayByte := make([]byte, 5)
 	if _, err := rand.Read(randArrayByte); err != nil {
-		panic(err)
+		return "", err
 	}
 	randString := fmt.Sprintf("%X", randArrayByte)
 	return fmt.Sprintf("%s.%s",randString, mimetype), nil
