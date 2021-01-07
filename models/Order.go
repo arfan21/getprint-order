@@ -1,7 +1,6 @@
 package models
 
 import (
-	validator "github.com/go-ozzo/ozzo-validation/v4"
 	"gopkg.in/guregu/null.v4"
 	"time"
 )
@@ -14,7 +13,7 @@ type Order struct {
 	PartnerID    uint          `gorm:"not null" json:"partner_id"`
 	UserID       uint          `gorm:"not null" json:"user_id"`
 	Status       string        `gorm:"default:'pending'" json:"status"`
-	OrderDetails []OrderDetail `json:"order_details"`
+	OrderDetails []OrderDetail `gorm:"foreignKey:order_id;constraint:OnDelete:CASCADE;" json:"order_details"`
 }
 
 type OrderDetail struct {
@@ -27,12 +26,6 @@ type OrderDetail struct {
 	Path      string    `gorm:"not null" json:"path"`
 }
 
-func (o Order) Validate() error {
-	return validator.Errors{
-		"partner_id": validator.Validate(o.PartnerID, validator.Required),
-		"user_id":    validator.Validate(o.UserID, validator.Required),
-	}.Filter()
-}
 
 type OrderRepository interface {
 	Create(data *Order) error

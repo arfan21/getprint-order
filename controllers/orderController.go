@@ -5,9 +5,11 @@ import (
 	"github.com/arfan21/getprint-order/repository"
 	"github.com/arfan21/getprint-order/services"
 	"github.com/arfan21/getprint-order/utils"
+	"github.com/arfan21/getprint-order/validation"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 )
 
 type orderController struct {
@@ -20,6 +22,8 @@ func NewOrderController(route *echo.Echo, db *gorm.DB) {
 
 	ctrl := orderController{service: service}
 	route.POST("/order", ctrl.Create)
+	route.GET("/order/:id", ctrl.GetById)
+	route.GET("/order/user/:id", ctrl.GetByUserId)
 }
 
 func (ctrl *orderController) Create(c echo.Context) error {
@@ -29,7 +33,7 @@ func (ctrl *orderController) Create(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, utils.Response("error", err.Error(), nil))
 	}
 
-	if err := order.Validate(); err != nil {
+	if err := validation.Validate(*order); err != nil {
 		return c.JSON(http.StatusBadRequest, utils.Response("error", err, nil))
 	}
 
@@ -43,11 +47,39 @@ func (ctrl *orderController) Create(c echo.Context) error {
 }
 
 func (ctrl *orderController) GetById(c echo.Context) error {
-	return nil
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 32)
+
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.Response("error", err.Error(), nil))
+	}
+
+	data, err := ctrl.service.GetByID(uint(id))
+
+	if err != nil {
+		return c.JSON(utils.GetStatusCode(err), utils.Response("error", err.Error(), nil))
+	}
+
+	return c.JSON(http.StatusOK, utils.Response("success", nil, data))
 }
 
 func (ctrl *orderController) GetByUserId(c echo.Context) error {
-	return nil
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 32)
+
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.Response("error", err.Error(), nil))
+	}
+
+	data, err := ctrl.service.GetByUserID(uint(id))
+
+	if err != nil {
+		return c.JSON(utils.GetStatusCode(err), utils.Response("error", err.Error(), nil))
+	}
+
+	return c.JSON(http.StatusOK, utils.Response("success", nil, data))
 }
 
 func (ctrl *orderController) Update(c echo.Context) error {
