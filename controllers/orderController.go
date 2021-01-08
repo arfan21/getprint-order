@@ -24,6 +24,7 @@ func NewOrderController(route *echo.Echo, db *gorm.DB) {
 	route.POST("/order", ctrl.Create)
 	route.GET("/order/:id", ctrl.GetById)
 	route.GET("/order/user/:id", ctrl.GetByUserId)
+	route.PUT("/order/:id", ctrl.Update)
 }
 
 func (ctrl *orderController) Create(c echo.Context) error {
@@ -43,7 +44,7 @@ func (ctrl *orderController) Create(c echo.Context) error {
 		return c.JSON(utils.GetStatusCode(err), utils.Response("error", err.Error(), nil))
 	}
 
-	return c.JSON(http.StatusOK, utils.Response("success", "success create order", order))
+	return c.JSON(http.StatusOK, utils.Response("success", nil, order))
 }
 
 func (ctrl *orderController) GetById(c echo.Context) error {
@@ -83,5 +84,25 @@ func (ctrl *orderController) GetByUserId(c echo.Context) error {
 }
 
 func (ctrl *orderController) Update(c echo.Context) error {
-	return nil
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 32)
+
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.Response("error", err.Error(), nil))
+	}
+
+	order := new(models.Order)
+	order.ID = uint(id)
+	if err := c.Bind(order); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, utils.Response("error", err.Error(), nil))
+	}
+
+	err = ctrl.service.Update(order)
+
+	if err != nil {
+		return c.JSON(utils.GetStatusCode(err), utils.Response("error", err.Error(), nil))
+	}
+
+	return c.JSON(http.StatusOK, utils.Response("success", nil, order))
 }

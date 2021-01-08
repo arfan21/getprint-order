@@ -47,12 +47,12 @@ func (repo *orderRepository) GetByUserID(userID uint) (*[]models.Order, error) {
 		return nil, err
 	}
 
-	errg, _ := errgroup.WithContext(context.Background())
+	errg, ctx := errgroup.WithContext(context.Background())
 	for index, order := range orders{
 		index, order := index, order
 		errg.Go(func()error{
 			orderDetails := make([]models.OrderDetail, 0)
-			err := repo.db.Where("order_id=?",order.ID).Find(&orderDetails).Error
+			err := repo.db.WithContext(ctx).Where("order_id=?",order.ID).Find(&orderDetails).Error
 
 			if err != nil{
 				return err
@@ -70,7 +70,7 @@ func (repo *orderRepository) GetByUserID(userID uint) (*[]models.Order, error) {
 }
 
 func (repo *orderRepository) Update(data *models.Order) error {
-	err := repo.db.Save(&data).Error
+	err := repo.db.Model(&data).Update("status", data.Status).Error
 	if err != nil {
 		return err
 	}

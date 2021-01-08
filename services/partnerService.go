@@ -13,10 +13,10 @@ import (
 
 
 
-func GetUser(id uint) (map[string]interface{}, error) {
-	url := os.Getenv("SERVICE_USER")
+func GetPartner(id uint) (map[string]interface{}, error) {
+	url := os.Getenv("SERVICE_PARTNER")
 
-	res, err := http.Get(url + "user/" + strconv.FormatUint(uint64(id), 10))
+	res, err := http.Get(url + "partner/" + strconv.FormatUint(uint64(id), 10))
 
 	if err != nil {
 		return nil, models.ErrInternalServerError
@@ -39,7 +39,7 @@ func GetUser(id uint) (map[string]interface{}, error) {
 	}
 
 	if res.StatusCode == 404 {
-		return nil, errors.New("user not found")
+		return nil, errors.New("partner not found")
 	}
 
 	decodeJSON["status_code"] = res.StatusCode
