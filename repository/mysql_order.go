@@ -69,6 +69,35 @@ func (repo *orderRepository) GetByUserID(userID uint) (*[]models.Order, error) {
 	return &orders, nil
 }
 
+func (repo *orderRepository) GetByPartnerID(partnerID uint) (*[]models.Order, error) {
+	orders := make([]models.Order, 0)
+	err := repo.db.Where("partner_id = ?", partnerID).Find(&orders).Error
+	if err != nil {
+		return nil, err
+	}
+
+	errg, ctx := errgroup.WithContext(context.Background())
+	for index, order := range orders{
+		index, order := index, order
+		errg.Go(func()error{
+			orderDetails := make([]models.OrderDetail, 0)
+			err := repo.db.WithContext(ctx).Where("order_id=?",order.ID).Find(&orderDetails).Error
+
+			if err != nil{
+				return err
+			}
+			orders[index].OrderDetails = orderDetails
+			return nil
+		})
+	}
+
+	if err := errg.Wait(); err != nil {
+		return nil, err
+	}
+
+	return &orders, nil
+}
+
 func (repo *orderRepository) Update(data *models.Order) error {
 	err := repo.db.Model(&data).Update("status", data.Status).Error
 	if err != nil {

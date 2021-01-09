@@ -24,6 +24,7 @@ func NewOrderController(route *echo.Echo, db *gorm.DB) {
 	route.POST("/order", ctrl.Create)
 	route.GET("/order/:id", ctrl.GetById)
 	route.GET("/order/user/:id", ctrl.GetByUserId)
+	route.GET("/order/partner/:id", ctrl.GetByPartnerId)
 	route.PUT("/order/:id", ctrl.Update)
 }
 
@@ -75,6 +76,24 @@ func (ctrl *orderController) GetByUserId(c echo.Context) error {
 	}
 
 	data, err := ctrl.service.GetByUserID(uint(id))
+
+	if err != nil {
+		return c.JSON(utils.GetStatusCode(err), utils.Response("error", err.Error(), nil))
+	}
+
+	return c.JSON(http.StatusOK, utils.Response("success", nil, data))
+}
+
+func (ctrl *orderController) GetByPartnerId(c echo.Context) error {
+	idParam := c.Param("id")
+
+	id, err := strconv.ParseUint(idParam, 10, 32)
+
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, utils.Response("error", err.Error(), nil))
+	}
+
+	data, err := ctrl.service.GetByPartnerID(uint(id))
 
 	if err != nil {
 		return c.JSON(utils.GetStatusCode(err), utils.Response("error", err.Error(), nil))

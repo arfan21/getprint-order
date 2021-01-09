@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"github.com/arfan21/getprint-order/models"
 	"github.com/arfan21/getprint-order/utils"
 	"golang.org/x/sync/errgroup"
@@ -58,8 +57,6 @@ func (service *orderService) Create(data *models.Order) error{
 	for index, orderDetail := range data.OrderDetails{
 		index, orderDetail := index, orderDetail
 		errg2.Go(func() error{
-
-			fmt.Println("Upload ", index)
 			buffer, filename, err := utils.GetFileBufferAndFileName(orderDetail.File)
 			if err != nil{
 				return models.ErrUnprocessableEntity
@@ -121,6 +118,15 @@ func (service *orderService) GetByID(id uint) (*models.Order, error){
 
 func (service *orderService) GetByUserID(userID uint) (*[]models.Order, error){
 	orders, err := service.repo.GetByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (service *orderService) GetByPartnerID(partnerID uint) (*[]models.Order, error){
+	orders, err := service.repo.GetByPartnerID(partnerID)
 	if err != nil {
 		return nil, err
 	}
