@@ -1,31 +1,31 @@
-package controllers
+package order
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/arfan21/getprint-order/models"
-	"github.com/arfan21/getprint-order/repository"
-	"github.com/arfan21/getprint-order/services"
+	_orderRepo "github.com/arfan21/getprint-order/repository/mysql/order"
+	_orderSrv "github.com/arfan21/getprint-order/services/order"
 	"github.com/arfan21/getprint-order/utils"
 	"github.com/arfan21/getprint-order/validation"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
-	"net/http"
-	"strconv"
 )
+
+type OrderController interface {
+	Routes(route *echo.Echo)
+}
 
 type orderController struct {
 	service models.OrderService
 }
 
-func NewOrderController(route *echo.Echo, db *gorm.DB) {
-	repo := repository.NewOrderRepository(db)
-	service := services.NewOrderService(repo)
+func NewOrderController(db *gorm.DB) OrderController {
+	repo := _orderRepo.NewOrderRepository(db)
+	service := _orderSrv.NewOrderService(repo)
 
-	ctrl := orderController{service: service}
-	route.POST("/order", ctrl.Create)
-	route.GET("/order/:id", ctrl.GetById)
-	route.GET("/order/user/:id", ctrl.GetByUserId)
-	route.GET("/order/partner/:id", ctrl.GetByPartnerId)
-	route.PUT("/order/:id", ctrl.Update)
+	return &orderController{service: service}
 }
 
 func (ctrl *orderController) Create(c echo.Context) error {

@@ -1,8 +1,10 @@
 package models
 
 import (
-	"gopkg.in/guregu/null.v4"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
+	"gopkg.in/guregu/null.v4"
 )
 
 type Order struct {
@@ -11,7 +13,7 @@ type Order struct {
 	UpdatedAt    time.Time     `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt    null.Time     `gorm:"index" json:"deleted_at,omitempty"`
 	PartnerID    uint          `gorm:"not null" json:"partner_id"`
-	UserID       uint          `gorm:"not null" json:"user_id"`
+	UserID       uuid.UUID     `gorm:"not null" json:"user_id"`
 	TotalPrice   uint          `gorm:"not null" json:"total_price"`
 	Status       string        `gorm:"default:'pending'" json:"status"`
 	OrderDetails []OrderDetail `gorm:"foreignKey:order_id;constraint:OnDelete:CASCADE;" json:"order_details"`
