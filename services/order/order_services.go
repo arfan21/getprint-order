@@ -6,6 +6,8 @@ import (
 
 	"github.com/arfan21/getprint-order/models"
 	_dropboxRepo "github.com/arfan21/getprint-order/repository/dropbox"
+	_partnerRepo "github.com/arfan21/getprint-order/repository/partner"
+	_userRepo "github.com/arfan21/getprint-order/repository/user"
 	"github.com/arfan21/getprint-order/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -27,41 +29,41 @@ func NewOrderService(repo models.OrderRepository) models.OrderService {
 }
 
 func (service *orderService) Create(data *models.Order) error {
-	// errg, ctx := errgroup.WithContext(context.Background())
+	errg, ctx := errgroup.WithContext(context.Background())
 
-	// userRepo := _userRepo.NewUserRepository(ctx)
-	// partnerRepo := _partnerRepo.NewPartnerRepository(ctx)
+	userRepo := _userRepo.NewUserRepository(ctx)
+	partnerRepo := _partnerRepo.NewPartnerRepository(ctx)
 
-	// partnerChan := make(chan map[string]interface{})
+	partnerChan := make(chan map[string]interface{})
 
-	// //find user
-	// errg.Go(func() error {
-	// 	_, err := userRepo.GetUserByID(data.UserID.String())
+	//find user
+	errg.Go(func() error {
+		_, err := userRepo.GetUserByID(data.UserID.String())
 
-	// 	if err != nil {
-	// 		return err
-	// 	}
+		if err != nil {
+			return err
+		}
 
-	// 	return nil
-	// })
+		return nil
+	})
 
-	// //find partner
-	// errg.Go(func() error {
-	// 	data, err := partnerRepo.GetPartnerByID(data.PartnerID)
+	//find partner
+	errg.Go(func() error {
+		data, err := partnerRepo.GetPartnerByID(data.PartnerID)
 
-	// 	if err != nil {
-	// 		close(partnerChan)
-	// 		return err
-	// 	}
-	// 	partnerChan <- data
-	// 	close(partnerChan)
-	// 	return nil
-	// })
-	// partner := <-partnerChan
+		if err != nil {
+			close(partnerChan)
+			return err
+		}
+		partnerChan <- data
+		close(partnerChan)
+		return nil
+	})
+	partner := <-partnerChan
 
-	// if err := errg.Wait(); err != nil {
-	// 	return err
-	// }
+	if err := errg.Wait(); err != nil {
+		return err
+	}
 
 	errg2, ctx2 := errgroup.WithContext(context.Background())
 	dropboxRepo := _dropboxRepo.NewDropboxRepository(ctx2)
@@ -100,20 +102,20 @@ func (service *orderService) Create(data *models.Order) error {
 
 		return err
 	}
-	// price := partner["data"].(map[string]interface{})["price"].(map[string]interface{})
-	// totalPrice := countPrice(data.OrderDetails, price)
-	// data.TotalPrice = totalPrice
+	price := partner["data"].(map[string]interface{})["price"].(map[string]interface{})
+	totalPrice := countPrice(data.OrderDetails, price)
+	data.TotalPrice = totalPrice
 
-	// err := service.repo.Create(data)
-	// if err != nil {
-	// 	errDelete := deleteFileDropbox(dropboxRepo, data.OrderDetails)
+	err := service.repo.Create(data)
+	if err != nil {
+		errDelete := deleteFileDropbox(dropboxRepo, data.OrderDetails)
 
-	// 	if errDelete != nil {
-	// 		err = errDelete
-	// 	}
+		if errDelete != nil {
+			err = errDelete
+		}
 
-	// 	return err
-	// }
+		return err
+	}
 
 	return nil
 }
