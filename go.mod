@@ -6,7 +6,7 @@ require (
 	github.com/dropbox/dropbox-sdk-go-unofficial v5.6.0+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/joho/godotenv v1.3.0
-	github.com/labstack/echo/v4 v4.1.17
+	github.com/labstack/echo/v4 v4.2.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/vincent-petithory/dataurl v0.0.0-20191104211930-d1553a71de50
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602 // indirect

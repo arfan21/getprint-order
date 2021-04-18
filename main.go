@@ -9,6 +9,7 @@ import (
 	"github.com/arfan21/getprint-order/utils"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -23,6 +24,8 @@ func main() {
 	}
 
 	route := echo.New()
+	route.Use(middleware.Recover())
+	route.Use(middleware.Logger())
 
 	orderCtrl := _orderCtrl.NewOrderController(db)
 	orderCtrl.Routes(route)

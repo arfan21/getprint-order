@@ -158,12 +158,7 @@ func (service *orderService) Update(data *models.Order) error {
 		return err
 	}
 
-	err = utils.Replace(*order, data)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return utils.Replace(*order, data)
 }
 
 func deleteFileDropbox(dbx _dropboxRepo.Dropbox, data []models.OrderDetail) error {
@@ -182,11 +177,7 @@ func deleteFileDropbox(dbx _dropboxRepo.Dropbox, data []models.OrderDetail) erro
 		}
 	}
 
-	if err := errg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return errg.Wait()
 }
 
 func countPrice(data []models.OrderDetail, price map[string]interface{}) uint {
