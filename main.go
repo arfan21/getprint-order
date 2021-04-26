@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	_orderCtrl "github.com/arfan21/getprint-order/controllers/http/order"
@@ -26,6 +27,12 @@ func main() {
 	route := echo.New()
 	route.Use(middleware.Recover())
 	route.Use(middleware.Logger())
+
+	route.GET("/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Getpring Service Order",
+		})
+	})
 
 	orderCtrl := _orderCtrl.NewOrderController(db)
 	orderCtrl.Routes(route)
