@@ -2,29 +2,32 @@ package order
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/arfan21/getprint-order/models"
 	_dropboxRepo "github.com/arfan21/getprint-order/repository/dropbox"
+	_orderRepo "github.com/arfan21/getprint-order/repository/mysql/order"
 	_partnerRepo "github.com/arfan21/getprint-order/repository/partner"
 	_userRepo "github.com/arfan21/getprint-order/repository/user"
 	"github.com/arfan21/getprint-order/utils"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/sync/errgroup"
 )
 
 type OrderService interface {
 	Create(data *models.Order) error
 	GetByID(id uint) (*models.Order, error)
-	GetByUserID(userID uint) (*[]models.Order, error)
+	GetByUserID(userID string) (*[]models.Order, error)
 	GetByPartnerID(partnerID uint) (*[]models.Order, error)
 	Update(data *models.Order) error
 }
 
 type orderService struct {
-	repo models.OrderRepository
+	repo _orderRepo.OrderRepository
 }
 
-func NewOrderService(repo models.OrderRepository) models.OrderService {
+func NewOrderService(repo _orderRepo.OrderRepository) OrderService {
 	return &orderService{repo: repo}
 }
 
@@ -34,12 +37,14 @@ func (service *orderService) Create(data *models.Order) error {
 	userRepo := _userRepo.NewUserRepository(ctx)
 	partnerRepo := _partnerRepo.NewPartnerRepository(ctx)
 
-	partnerChan := make(chan map[string]interface{})
+	partnerChan := make(chan *_partnerRepo.PartnerResponse)
+	defer close(partnerChan)
 
 	//find user
 	errg.Go(func() error {
+		fmt.Println("check user")
 		_, err := userRepo.GetUserByID(data.UserID.String())
-
+		fmt.Println("error  user :", err)
 		if err != nil {
 			return err
 		}
@@ -50,17 +55,20 @@ func (service *orderService) Create(data *models.Order) error {
 	//find partner
 	errg.Go(func() error {
 		data, err := partnerRepo.GetPartnerByID(data.PartnerID)
-
+		fmt.Println("mengirim data partner")
+		defer fmt.Println("selesai mengirim data partner")
 		if err != nil {
-			close(partnerChan)
+			partnerChan <- nil
+
 			return err
 		}
 		partnerChan <- data
-		close(partnerChan)
+
 		return nil
 	})
 	partner := <-partnerChan
-
+	fmt.Println("menerima data")
+	fmt.Println(partner)
 	if err := errg.Wait(); err != nil {
 		return err
 	}
@@ -102,8 +110,8 @@ func (service *orderService) Create(data *models.Order) error {
 
 		return err
 	}
-	price := partner["data"].(map[string]interface{})["price"].(map[string]interface{})
-	totalPrice := countPrice(data.OrderDetails, price)
+
+	totalPrice := countPrice(data.OrderDetails, partner)
 	data.TotalPrice = totalPrice
 
 	err := service.repo.Create(data)
@@ -129,8 +137,13 @@ func (service *orderService) GetByID(id uint) (*models.Order, error) {
 	return order, nil
 }
 
-func (service *orderService) GetByUserID(userID uint) (*[]models.Order, error) {
-	orders, err := service.repo.GetByUserID(userID)
+func (service *orderService) GetByUserID(userID string) (*[]models.Order, error) {
+	userIDUUID , err := uuid.FromString(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	orders, err := service.repo.GetByUserID(userIDUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -180,10 +193,10 @@ func deleteFileDropbox(dbx _dropboxRepo.Dropbox, data []models.OrderDetail) erro
 	return errg.Wait()
 }
 
-func countPrice(data []models.OrderDetail, price map[string]interface{}) uint {
-	printPrice := uint(price["print"].(float64))
-	scanPrice := uint(price["print"].(float64))
-	photocopyPrice := uint(price["print"].(float64))
+func countPrice(data []models.OrderDetail, res *_partnerRepo.PartnerResponse) uint {
+	printPrice := uint(res.Data.Print.Int64)
+	scanPrice := uint(res.Data.Scan.Int64)
+	photocopyPrice := uint(res.Data.Fotocopy.Int64)
 
 	var totalPrice uint = 0
 

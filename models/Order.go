@@ -31,19 +31,3 @@ type OrderDetail struct {
 	ScanQty      uint      `gorm:"default:0" json:"scan_qty"`
 	PhotocopyQty uint      `gorm:"default:0" json:"photocopy_qty"`
 }
-
-type OrderRepository interface {
-	Create(data *Order) error
-	GetByID(id uint) (*Order, error)
-	GetByUserID(userID uint) (*[]Order, error)
-	GetByPartnerID(partnerID uint) (*[]Order, error)
-	Update(data *Order) error
-}
-
-type OrderService interface {
-	Create(data *Order) error
-	GetByID(id uint) (*Order, error)
-	GetByUserID(userID uint) (*[]Order, error)
-	GetByPartnerID(partnerID uint) (*[]Order, error)
-	Update(data *Order) error
-}

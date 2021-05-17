@@ -18,7 +18,7 @@ type OrderController interface {
 }
 
 type orderController struct {
-	service models.OrderService
+	service _orderSrv.OrderService
 }
 
 func NewOrderController(db *gorm.DB) OrderController {
@@ -67,15 +67,9 @@ func (ctrl *orderController) GetById(c echo.Context) error {
 }
 
 func (ctrl *orderController) GetByUserId(c echo.Context) error {
-	idParam := c.Param("id")
+	id := c.Param("id")
 
-	id, err := strconv.ParseUint(idParam, 10, 32)
-
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, utils.Response("error", err.Error(), nil))
-	}
-
-	data, err := ctrl.service.GetByUserID(uint(id))
+	data, err := ctrl.service.GetByUserID(id)
 
 	if err != nil {
 		return c.JSON(utils.GetStatusCode(err), utils.Response("error", err.Error(), nil))

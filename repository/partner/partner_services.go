@@ -11,7 +11,7 @@ import (
 )
 
 type PartnerRepository interface {
-	GetPartnerByID(id uint) (map[string]interface{}, error)
+	GetPartnerByID(id uint) (*PartnerResponse, error)
 }
 type partnerRepository struct {
 	ctx context.Context
@@ -23,7 +23,7 @@ func NewPartnerRepository(ctx context.Context) PartnerRepository {
 	return &partnerRepository{ctx, url}
 }
 
-func (repo *partnerRepository) GetPartnerByID(id uint) (map[string]interface{}, error) {
+func (repo *partnerRepository) GetPartnerByID(id uint) (*PartnerResponse, error) {
 
 	client := new(http.Client)
 	req, err := http.NewRequestWithContext(repo.ctx, "GET", repo.url+"/partner/"+strconv.FormatUint(uint64(id), 10), nil)
@@ -46,17 +46,17 @@ func (repo *partnerRepository) GetPartnerByID(id uint) (map[string]interface{}, 
 		return nil, err
 	}
 
-	decodedJSON := make(map[string]interface{})
+	partnerRes := new(PartnerResponse)
 
-	err = json.Unmarshal(body, &decodedJSON)
+	err = json.Unmarshal(body, partnerRes)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if !(res.StatusCode >= 200 && res.StatusCode < 300) {
-		return nil, errors.New(decodedJSON["message"].(string))
+		return nil, errors.New(partnerRes.Message.(string))
 	}
 
-	return decodedJSON["data"].(map[string]interface{}), nil
+	return partnerRes, nil
 }

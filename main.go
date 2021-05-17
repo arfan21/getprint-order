@@ -30,7 +30,7 @@ func main() {
 
 	route.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{
-			"message": "Getpring Service Order",
+			"message": "Getprint Service Order",
 		})
 	})
 
