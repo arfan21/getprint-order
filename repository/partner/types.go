@@ -4,12 +4,11 @@ import (
 	"time"
 
 	uuid "github.com/satori/go.uuid"
-	"gopkg.in/guregu/null.v4/zero"
 )
 
 type PartnerResponse struct {
-	Status  string          `json:"status"`
-	Message interface{}     `json:"message,omitempty"`
+	Status  string        `json:"status"`
+	Message interface{}   `json:"message,omitempty"`
 	Data    partnerStruct `json:"data,omitempty"`
 }
 
@@ -25,8 +24,8 @@ type partnerStruct struct {
 	Address       string    `json:"address"`
 	Lat           string    `json:"lat"`
 	Lng           string    `json:"lng"`
-	Print         zero.Int  `json:"print"`
-	Scan          zero.Int  `json:"scan"`
-	Fotocopy      zero.Int  `json:"fotocopy"`
+	Print         int64     `json:"print"`
+	Scan          int64     `json:"scan"`
+	Fotocopy      int64     `json:"fotocopy"`
 	TotalFollower int64     `json:"total_follower"`
 }

@@ -20,14 +20,12 @@ type Order struct {
 }
 
 type OrderDetail struct {
-	ID           uint      `gorm:"primary_key" json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt    null.Time `gorm:"index" json:"deleted_at,omitempty"`
-	OrderID      uint      `gorm:"not null" json:"order_id"`
-	File         string    `gorm:"not null" json:"file"`
-	Path         string    `gorm:"not null" json:"path"`
-	PrintQty     uint      `gorm:"default:0" json:"print_qty"`
-	ScanQty      uint      `gorm:"default:0" json:"scan_qty"`
-	PhotocopyQty uint      `gorm:"default:0" json:"photocopy_qty"`
+	ID        uint      `gorm:"primary_key" json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt null.Time `gorm:"index" json:"deleted_at,omitempty"`
+	OrderID   uint      `gorm:"not null" json:"order_id"`
+	OrderType string    `gorm:"type:enum('print','fotocopy','scan');not null" json:"order_type"`
+	Qty       uint      `gorm:"default:1" json:"qtc"`
+	LinkFile  string    `gorm:"not null" json:"link_file"`
 }

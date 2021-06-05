@@ -10,23 +10,22 @@ import (
 )
 
 type UserRepository interface {
-	GetUserByID(id string) (map[string]interface{}, error)
+	GetUserByID(ctx context.Context, id string) (map[string]interface{}, error)
 }
 
 type userRepository struct {
-	ctx context.Context
 	url string
 }
 
-func NewUserRepository(ctx context.Context) UserRepository {
+func NewUserRepository() UserRepository {
 	url := os.Getenv("SERVICE_USER")
-	return &userRepository{ctx, url}
+	return &userRepository{url}
 }
 
-func (repo *userRepository) GetUserByID(id string) (map[string]interface{}, error) {
+func (repo *userRepository) GetUserByID(ctx context.Context, id string) (map[string]interface{}, error) {
 	client := new(http.Client)
 
-	req, err := http.NewRequestWithContext(repo.ctx, "GET", repo.url+"/user/"+id, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", repo.url+"/user/"+id, nil)
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		return nil, err

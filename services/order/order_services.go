@@ -2,11 +2,9 @@ package order
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"reflect"
 
 	"github.com/arfan21/getprint-order/models"
-	_dropboxRepo "github.com/arfan21/getprint-order/repository/dropbox"
 	_orderRepo "github.com/arfan21/getprint-order/repository/mysql/order"
 	_partnerRepo "github.com/arfan21/getprint-order/repository/partner"
 	_userRepo "github.com/arfan21/getprint-order/repository/user"
@@ -24,27 +22,26 @@ type OrderService interface {
 }
 
 type orderService struct {
-	repo _orderRepo.OrderRepository
+	orderRepo   _orderRepo.OrderRepository
+	userRepo    _userRepo.UserRepository
+	partnerRepo _partnerRepo.PartnerRepository
 }
 
 func NewOrderService(repo _orderRepo.OrderRepository) OrderService {
-	return &orderService{repo: repo}
+	userRepo := _userRepo.NewUserRepository()
+	partnerRepo := _partnerRepo.NewPartnerRepository(context.Background())
+	return &orderService{orderRepo: repo, userRepo: userRepo, partnerRepo: partnerRepo}
 }
 
 func (service *orderService) Create(data *models.Order) error {
 	errg, ctx := errgroup.WithContext(context.Background())
-
-	userRepo := _userRepo.NewUserRepository(ctx)
-	partnerRepo := _partnerRepo.NewPartnerRepository(ctx)
 
 	partnerChan := make(chan *_partnerRepo.PartnerResponse)
 	defer close(partnerChan)
 
 	//find user
 	errg.Go(func() error {
-		fmt.Println("check user")
-		_, err := userRepo.GetUserByID(data.UserID.String())
-		fmt.Println("error  user :", err)
+		_, err := service.userRepo.GetUserByID(ctx, data.UserID.String())
 		if err != nil {
 			return err
 		}
@@ -54,9 +51,7 @@ func (service *orderService) Create(data *models.Order) error {
 
 	//find partner
 	errg.Go(func() error {
-		data, err := partnerRepo.GetPartnerByID(data.PartnerID)
-		fmt.Println("mengirim data partner")
-		defer fmt.Println("selesai mengirim data partner")
+		data, err := service.partnerRepo.GetPartnerByID(data.PartnerID)
 		if err != nil {
 			partnerChan <- nil
 
@@ -66,61 +61,18 @@ func (service *orderService) Create(data *models.Order) error {
 
 		return nil
 	})
+
 	partner := <-partnerChan
-	fmt.Println("menerima data")
-	fmt.Println(partner)
+
 	if err := errg.Wait(); err != nil {
-		return err
-	}
-
-	errg2, ctx2 := errgroup.WithContext(context.Background())
-	dropboxRepo := _dropboxRepo.NewDropboxRepository(ctx2)
-	//Uploading file and file from request body is content/type;base64
-	for index, orderDetail := range data.OrderDetails {
-		index, orderDetail := index, orderDetail
-		errg2.Go(func() error {
-			buffer, filename, err := utils.GetFileBufferAndFileName(orderDetail.File)
-			if err != nil {
-				return models.ErrUnprocessableEntity
-			}
-
-			path, err := dropboxRepo.Uploader(filename, buffer)
-			if err != nil {
-				return err
-			}
-
-			data.OrderDetails[index].Path = path
-
-			sharedLink, err := dropboxRepo.CreateSharedLink(path)
-			if err != nil {
-				return err
-			}
-			data.OrderDetails[index].File = sharedLink
-
-			return nil
-		})
-	}
-
-	if err := errg2.Wait(); err != nil {
-		errDelete := deleteFileDropbox(dropboxRepo, data.OrderDetails)
-
-		if errDelete != nil {
-			err = errDelete
-		}
-
 		return err
 	}
 
 	totalPrice := countPrice(data.OrderDetails, partner)
 	data.TotalPrice = totalPrice
 
-	err := service.repo.Create(data)
+	err := service.orderRepo.Create(data)
 	if err != nil {
-		errDelete := deleteFileDropbox(dropboxRepo, data.OrderDetails)
-
-		if errDelete != nil {
-			err = errDelete
-		}
 
 		return err
 	}
@@ -129,7 +81,7 @@ func (service *orderService) Create(data *models.Order) error {
 }
 
 func (service *orderService) GetByID(id uint) (*models.Order, error) {
-	order, err := service.repo.GetByID(id)
+	order, err := service.orderRepo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -138,12 +90,12 @@ func (service *orderService) GetByID(id uint) (*models.Order, error) {
 }
 
 func (service *orderService) GetByUserID(userID string) (*[]models.Order, error) {
-	userIDUUID , err := uuid.FromString(userID)
+	userIDUUID, err := uuid.FromString(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	orders, err := service.repo.GetByUserID(userIDUUID)
+	orders, err := service.orderRepo.GetByUserID(userIDUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +104,7 @@ func (service *orderService) GetByUserID(userID string) (*[]models.Order, error)
 }
 
 func (service *orderService) GetByPartnerID(partnerID uint) (*[]models.Order, error) {
-	orders, err := service.repo.GetByPartnerID(partnerID)
+	orders, err := service.orderRepo.GetByPartnerID(partnerID)
 	if err != nil {
 		return nil, err
 	}
@@ -161,12 +113,12 @@ func (service *orderService) GetByPartnerID(partnerID uint) (*[]models.Order, er
 }
 
 func (service *orderService) Update(data *models.Order) error {
-	order, err := service.repo.GetByID(data.ID)
+	order, err := service.orderRepo.GetByID(data.ID)
 	if err != nil {
 		return err
 	}
 
-	err = service.repo.Update(data)
+	err = service.orderRepo.Update(data)
 	if err != nil {
 		return err
 	}
@@ -174,45 +126,20 @@ func (service *orderService) Update(data *models.Order) error {
 	return utils.Replace(*order, data)
 }
 
-func deleteFileDropbox(dbx _dropboxRepo.Dropbox, data []models.OrderDetail) error {
-	errg, _ := errgroup.WithContext(context.Background())
-
-	for _, orderDetail := range data {
-		orderDetail := orderDetail
-		if !strings.Contains(orderDetail.File, "base64") {
-			errg.Go(func() error {
-				err := dbx.Delete(orderDetail.Path)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-		}
-	}
-
-	return errg.Wait()
-}
-
-func countPrice(data []models.OrderDetail, res *_partnerRepo.PartnerResponse) uint {
-	printPrice := uint(res.Data.Print.Int64)
-	scanPrice := uint(res.Data.Scan.Int64)
-	photocopyPrice := uint(res.Data.Fotocopy.Int64)
-
+func countPrice(data []models.OrderDetail, partnerResponse *_partnerRepo.PartnerResponse) uint {
 	var totalPrice uint = 0
 
+	dataPartner := partnerResponse.Data
+	elements := reflect.ValueOf(&dataPartner).Elem()
+
 	for _, order := range data {
-		if order.PrintQty != 0 {
-			totalPrice = totalPrice + (order.PrintQty * printPrice)
+		for i := 0; i < elements.NumField(); i++ {
+			price := elements.Field(i)
+			nameJson := elements.Type().Field(i).Tag.Get("json")
+			if order.OrderType == nameJson {
+				totalPrice += (order.Qty * uint(price.Int()))
+			}
 		}
-
-		if order.ScanQty != 0 {
-			totalPrice = totalPrice + (order.ScanQty * scanPrice)
-		}
-
-		if order.PhotocopyQty != 0 {
-			totalPrice = totalPrice + (order.PhotocopyQty * photocopyPrice)
-		}
-
 	}
 
 	return totalPrice
