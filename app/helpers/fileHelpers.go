@@ -1,10 +1,11 @@
-package utils
+package helpers
 
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/vincent-petithory/dataurl"
 	"strings"
+
+	"github.com/vincent-petithory/dataurl"
 )
 
 //GetFileBufferAndFileName return filename with mimetype and buffer from base64string

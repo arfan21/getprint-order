@@ -1,9 +1,10 @@
-package utils
+package helpers
 
 import (
-	"github.com/arfan21/getprint-order/models"
 	"net/http"
 	"strings"
+
+	models2 "github.com/arfan21/getprint-order/app/models"
 )
 
 func GetStatusCode(err error) int {
@@ -15,11 +16,11 @@ func GetStatusCode(err error) int {
 	}
 
 	switch err {
-	case models.ErrConflict:
+	case models2.ErrConflict:
 		return http.StatusConflict
-	case models.ErrNotFound:
+	case models2.ErrNotFound:
 		return http.StatusNotFound
-	case models.ErrUnprocessableEntity:
+	case models2.ErrUnprocessableEntity:
 		return http.StatusUnprocessableEntity
 	default:
 		return http.StatusInternalServerError

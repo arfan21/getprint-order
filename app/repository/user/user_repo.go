@@ -26,10 +26,11 @@ func (repo *userRepository) GetUserByID(ctx context.Context, id string) (map[str
 	client := new(http.Client)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", repo.url+"/user/"+id, nil)
-	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Add("Content-Type", "application/json")
 
 	res, err := client.Do(req)
 

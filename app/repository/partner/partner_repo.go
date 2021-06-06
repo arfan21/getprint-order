@@ -24,13 +24,13 @@ func NewPartnerRepository(ctx context.Context) PartnerRepository {
 }
 
 func (repo *partnerRepository) GetPartnerByID(id uint) (*PartnerResponse, error) {
-
 	client := new(http.Client)
 	req, err := http.NewRequestWithContext(repo.ctx, "GET", repo.url+"/partner/"+strconv.FormatUint(uint64(id), 10), nil)
-	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Add("Content-Type", "application/json")
 
 	res, err := client.Do(req)
 

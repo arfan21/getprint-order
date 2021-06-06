@@ -1,14 +1,14 @@
-package order
+package services
 
 import (
 	"context"
 	"reflect"
 
-	"github.com/arfan21/getprint-order/models"
-	_orderRepo "github.com/arfan21/getprint-order/repository/mysql/order"
-	_partnerRepo "github.com/arfan21/getprint-order/repository/partner"
-	_userRepo "github.com/arfan21/getprint-order/repository/user"
-	"github.com/arfan21/getprint-order/utils"
+	"github.com/arfan21/getprint-order/app/helpers"
+	"github.com/arfan21/getprint-order/app/models"
+	repo "github.com/arfan21/getprint-order/app/repository/mysql"
+	_partnerRepo "github.com/arfan21/getprint-order/app/repository/partner"
+	_userRepo "github.com/arfan21/getprint-order/app/repository/user"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/sync/errgroup"
 )
@@ -22,12 +22,12 @@ type OrderService interface {
 }
 
 type orderService struct {
-	orderRepo   _orderRepo.OrderRepository
+	orderRepo   repo.OrderRepository
 	userRepo    _userRepo.UserRepository
 	partnerRepo _partnerRepo.PartnerRepository
 }
 
-func NewOrderService(repo _orderRepo.OrderRepository) OrderService {
+func NewOrderService(repo repo.OrderRepository) OrderService {
 	userRepo := _userRepo.NewUserRepository()
 	partnerRepo := _partnerRepo.NewPartnerRepository(context.Background())
 	return &orderService{orderRepo: repo, userRepo: userRepo, partnerRepo: partnerRepo}
@@ -123,7 +123,7 @@ func (service *orderService) Update(data *models.Order) error {
 		return err
 	}
 
-	return utils.Replace(*order, data)
+	return helpers.Replace(*order, data)
 }
 
 func countPrice(data []models.OrderDetail, partnerResponse *_partnerRepo.PartnerResponse) uint {
@@ -137,7 +137,7 @@ func countPrice(data []models.OrderDetail, partnerResponse *_partnerRepo.Partner
 			price := elements.Field(i)
 			nameJson := elements.Type().Field(i).Tag.Get("json")
 			if order.OrderType == nameJson {
-				totalPrice += (order.Qty * uint(price.Int()))
+				totalPrice += order.Qty * uint(price.Int())
 			}
 		}
 	}
