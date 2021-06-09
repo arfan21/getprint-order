@@ -31,7 +31,10 @@ func NewClient() (Client, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&models.Order{}, &models.OrderDetail{})
+	err = db.AutoMigrate(&models.Order{}, &models.OrderDetail{}, &models.Cart{})
+	if err != nil {
+		return nil, err
+	}
 	log.Println("MySql Connected")
 
 	return &client{db}, nil

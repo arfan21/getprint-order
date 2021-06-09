@@ -10,6 +10,6 @@ func Validate(order models2.Order) error{
 	return validator.Errors{
 		"user_id":    validator.Validate(order.UserID, is.UUIDv4),
 		"partner_id": validator.Validate(order.PartnerID, validator.Required),
-		"order_details": validator.Validate(order.OrderDetails, validator.Required),
+		"order_details": validator.Validate(order.OrderDetails, validator.Required, validator.Min(1)),
 	}.Filter()
 }

@@ -7,9 +7,10 @@ import (
 	_mediaRepo "github.com/arfan21/getprint-order/app/repository/media"
 	repo "github.com/arfan21/getprint-order/app/repository/mysql"
 	uuid "github.com/satori/go.uuid"
+	"golang.org/x/sync/errgroup"
 )
 
-type CartServices interface{
+type CartServices interface {
 	Create(data *models.Cart) error
 	GetByUserID(userid string) (*[]models.Cart, error)
 	Update(data *models.Cart) error
@@ -24,22 +25,22 @@ type cartServices struct {
 
 func NewCartServices(cartRepo repo.CartRepository) CartServices {
 	mediaRepo := _mediaRepo.NewMediaRepository()
-	return &cartServices{cartRepo,mediaRepo}
+	return &cartServices{cartRepo, mediaRepo}
 }
 
 func (srv *cartServices) Create(data *models.Cart) error {
 	return srv.cartRepo.Create(data)
 }
 
-func (srv *cartServices) GetByUserID(userid string) (*[]models.Cart, error){
-	userIdUUID, err:= uuid.FromString(userid)
+func (srv *cartServices) GetByUserID(userid string) (*[]models.Cart, error) {
+	userIdUUID, err := uuid.FromString(userid)
 	if err != nil {
 		return nil, err
 	}
 	return srv.cartRepo.GetByUserID(userIdUUID)
 }
 
-func (srv *cartServices) Update(data *models.Cart) error{
+func (srv *cartServices) Update(data *models.Cart) error {
 	dataFromDb, err := srv.cartRepo.GetByID(data.ID)
 	if err != nil {
 		return err
@@ -58,14 +59,52 @@ func (srv *cartServices) Update(data *models.Cart) error{
 	return nil
 }
 
-func (srv *cartServices) DeleteByID(id uint) error{
-	return srv.cartRepo.DeleteByCartID(id)
-}
-
-func (srv *cartServices) DeleteByUserID(userid string) error{
-	userIdUUID, err:= uuid.FromString(userid)
+func (srv *cartServices) DeleteByID(id uint) error {
+	dataFromDb, err := srv.cartRepo.GetByID(id)
 	if err != nil {
 		return err
 	}
+
+	if dataFromDb.LinkFile.Valid {
+		err := srv.mediaRepo.DeleteFile(context.Background(), dataFromDb.LinkFile.ValueOrZero())
+		if err != nil {
+			return err
+		}
+	}
+
+	return srv.cartRepo.DeleteByCartID(id)
+}
+
+func (srv *cartServices) DeleteByUserID(userid string) error {
+	userIdUUID, err := uuid.FromString(userid)
+	if err != nil {
+		return err
+	}
+
+	dataFromDb, err := srv.cartRepo.GetByUserID(userIdUUID)
+	if err != nil {
+		return err
+	}
+
+	errg, ctx := errgroup.WithContext(context.Background())
+
+	for _, data := range *dataFromDb {
+		if data.LinkFile.Valid {
+			errg.Go(func() error {
+				err := srv.mediaRepo.DeleteFile(ctx, data.LinkFile.ValueOrZero())
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+
+		}
+	}
+
+	if err := errg.Wait(); err != nil {
+		return err
+	}
+
 	return srv.cartRepo.DeleteByUserID(userIdUUID)
 }
