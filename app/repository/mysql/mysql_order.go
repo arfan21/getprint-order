@@ -4,7 +4,7 @@ import (
 	"context"
 
 	models2 "github.com/arfan21/getprint-order/app/models"
-	"github.com/arfan21/getprint-order/config/mysql"
+	"github.com/arfan21/getprint-order/configs"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/sync/errgroup"
 )
@@ -18,10 +18,10 @@ type OrderRepository interface {
 }
 
 type orderRepository struct {
-	db mysql.Client
+	db configs.Client
 }
 
-func NewOrderRepository(db mysql.Client) OrderRepository {
+func NewOrderRepository(db configs.Client) OrderRepository {
 	return &orderRepository{db: db}
 }
 

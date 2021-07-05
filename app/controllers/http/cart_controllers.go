@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type CartControllers interface{
+type CartControllers interface {
 	Create(c echo.Context) error
 	GetByUserID(c echo.Context) error
 	Update(c echo.Context) error
@@ -18,18 +18,18 @@ type CartControllers interface{
 	DeleteByUserID(c echo.Context) error
 }
 
-type cartControllers struct{
+type cartControllers struct {
 	cartSrv services.CartServices
 }
 
-func NewCartControllers(cartSrv services.CartServices) CartControllers{
+func NewCartControllers(cartSrv services.CartServices) CartControllers {
 	return &cartControllers{cartSrv}
 }
 
 func (ctrl *cartControllers) Create(c echo.Context) error {
-	cart := new(models.Cart)
+	cart := make([]models.Cart, 0)
 
-	if err := c.Bind(cart); err != nil {
+	if err := c.Bind(&cart); err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, helpers.Response("error", err.Error(), nil))
 	}
 
@@ -53,21 +53,21 @@ func (ctrl *cartControllers) GetByUserID(c echo.Context) error {
 }
 
 func (ctrl *cartControllers) Update(c echo.Context) error {
-	cart := new(models.Cart)
+	cart := make([]models.Cart, 0)
 
-	if err := c.Bind(cart); err != nil {
+	if err := c.Bind(&cart); err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, helpers.Response("error", err.Error(), nil))
 	}
 
-	err := ctrl.cartSrv.Create(cart)
+	err := ctrl.cartSrv.UpdateBatch(cart)
 	if err != nil {
 		return c.JSON(helpers.GetStatusCode(err), helpers.Response("error", err.Error(), nil))
 	}
 
-	return c.JSON(http.StatusOK, helpers.Response("success", nil, cart))
+	return c.JSON(http.StatusOK, helpers.Response("success", nil, nil))
 }
 
-func (ctrl *cartControllers) DeleteByID(c echo.Context) error{
+func (ctrl *cartControllers) DeleteByID(c echo.Context) error {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
 	if err != nil {
@@ -82,7 +82,7 @@ func (ctrl *cartControllers) DeleteByID(c echo.Context) error{
 	return c.JSON(http.StatusOK, helpers.Response("success", nil, nil))
 }
 
-func (ctrl *cartControllers) DeleteByUserID(c echo.Context) error{
+func (ctrl *cartControllers) DeleteByUserID(c echo.Context) error {
 	id := c.Param("id")
 
 	err := ctrl.cartSrv.DeleteByUserID(id)

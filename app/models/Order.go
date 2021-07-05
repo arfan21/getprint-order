@@ -26,6 +26,6 @@ type OrderDetail struct {
 	DeletedAt null.Time `gorm:"index" json:"deleted_at,omitempty"`
 	OrderID   uint      `gorm:"not null" json:"order_id"`
 	OrderType string    `gorm:"type:enum('print','fotocopy','scan');not null" json:"order_type"`
-	Qty       uint      `gorm:"default:1" json:"qtc"`
+	Qty       uint      `gorm:"default:1" json:"qty"`
 	LinkFile  string    `gorm:"not null" json:"link_file"`
 }

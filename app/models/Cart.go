@@ -15,6 +15,6 @@ type Cart struct {
 	UserID    uuid.UUID   `gorm:"type:char(36);not null" json:"user_id"`
 	PartnerID uint        `gorm:"not null" json:"partner_id"`
 	OrderType string      `gorm:"type:enum('print','fotocopy','scan');not null" json:"order_type"`
-	Qty       uint        `gorm:"default:1" json:"qtc"`
+	Qty       uint        `gorm:"default:1" json:"qty"`
 	LinkFile  null.String `json:"link_file"`
 }

@@ -6,14 +6,15 @@ import (
 	"github.com/arfan21/getprint-order/app/models"
 	_mediaRepo "github.com/arfan21/getprint-order/app/repository/media"
 	repo "github.com/arfan21/getprint-order/app/repository/mysql"
+	"github.com/arfan21/getprint-order/configs"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/sync/errgroup"
 )
 
 type CartServices interface {
-	Create(data *models.Cart) error
+	Create(data []models.Cart) error
 	GetByUserID(userid string) (*[]models.Cart, error)
-	Update(data *models.Cart) error
+	UpdateBatch(data []models.Cart) error
 	DeleteByID(id uint) error
 	DeleteByUserID(userid string) error
 }
@@ -21,14 +22,42 @@ type CartServices interface {
 type cartServices struct {
 	cartRepo  repo.CartRepository
 	mediaRepo _mediaRepo.MediaRepository
+	db        configs.Client
 }
 
-func NewCartServices(cartRepo repo.CartRepository) CartServices {
+func NewCartServices(db configs.Client, cartRepo repo.CartRepository) CartServices {
 	mediaRepo := _mediaRepo.NewMediaRepository()
-	return &cartServices{cartRepo, mediaRepo}
+	return &cartServices{cartRepo, mediaRepo, db}
 }
 
-func (srv *cartServices) Create(data *models.Cart) error {
+func (srv *cartServices) Create(data []models.Cart) error {
+	userId := data[0].UserID
+	dataCarts, err := srv.cartRepo.GetByUserID(userId)
+	if err != nil {
+		return err
+	}
+
+	for _, cart := range *dataCarts {
+		for i, newCart := range data {
+			if cart.OrderType == newCart.OrderType && cart.PartnerID == newCart.PartnerID {
+				cart.Qty += newCart.Qty
+				err := srv.cartRepo.UpdateByID(&cart)
+				if err != nil {
+					return err
+				}
+
+				// delete cart
+				data[i] = data[len(data)-1]
+				data[len(data)-1] = models.Cart{}
+				data = data[:len(data)-1]
+			}
+		}
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
 	return srv.cartRepo.Create(data)
 }
 
@@ -40,23 +69,26 @@ func (srv *cartServices) GetByUserID(userid string) (*[]models.Cart, error) {
 	return srv.cartRepo.GetByUserID(userIdUUID)
 }
 
-func (srv *cartServices) Update(data *models.Cart) error {
-	dataFromDb, err := srv.cartRepo.GetByID(data.ID)
-	if err != nil {
-		return err
-	}
-	if dataFromDb.LinkFile.Valid && dataFromDb.LinkFile != data.LinkFile {
-		err := srv.mediaRepo.DeleteFile(context.Background(), dataFromDb.LinkFile.ValueOrZero())
-		if err != nil {
-			return err
-		}
+func (srv *cartServices) UpdateBatch(data []models.Cart) error {
+	errg := errgroup.Group{}
+	tx := srv.db.Conn().Begin()
+
+	for _, cartItem := range data {
+		newCartItem := cartItem
+		errg.Go(func() error {
+			err := srv.cartRepo.UpdateByIDwithTx(tx, newCartItem)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 	}
 
-	err = srv.cartRepo.Update(data)
-	if err != nil {
+	if err := errg.Wait(); err != nil {
 		return err
 	}
-	return nil
+
+	return tx.Commit().Error
 }
 
 func (srv *cartServices) DeleteByID(id uint) error {
